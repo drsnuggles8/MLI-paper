@@ -1,0 +1,17 @@
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {section}{\numberline {2}Model calibration}{4}{section.2}%
+\contentsline {section}{\numberline {3}Deep calibration}{6}{section.3}%
+\contentsline {subsection}{\numberline {3.1}One-step approach: Deep calibration by the inverse map}{7}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Two-step approach: Learning the implied volatility map of models}{8}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}The two step approach: Pointwise training and implicit and grid-based training}{8}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}The role of the objective function: Pointwise training versus implicit and grid-based training}{11}{subsubsection.3.2.2}%
+\contentsline {section}{\numberline {4}Practical implementation}{13}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Network architecture and training}{13}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}The calibration step}{14}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}Bayesian Analysis of the Calibration}{14}{subsubsection.4.2.1}%
+\contentsline {section}{\numberline {5}Numerical experiments}{15}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Speed and accuracy of the price approximation networks}{15}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Calibration speed and accuracy}{16}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}A Bayes calibration experiment}{16}{subsection.5.3}%
+\contentsline {section}{\numberline {A}A numerical experiment with the inverse map }{17}{appendix.A}%
+\contentsline {section}{\numberline {B}Illustration of model parameters \& the pricing engine in the rBergomi model}{20}{appendix.B}%

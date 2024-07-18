@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "mli-paper"
+version = "0.1.0"
+description = "research project for MLI"
+authors = ["Ole Bueker <ole.bueker@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pandas = "^2.2.2"
+numpy = "^2.0.0"
+keras = "^3.4.1"
+matplotlib = "^3.9.1"
+scipy = "^1.14.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

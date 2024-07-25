@@ -8,3 +8,13 @@ __pycache__/
 # Ignore IDE/editor config files
 .vscode/
 .idea/
+
+# Tex stuff
+*.pdf
+*.fls
+*.aux
+*.fdb_latexmk
+*.log
+*.out
+*.gz
+*.toc

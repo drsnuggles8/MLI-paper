@@ -227,217 +227,129 @@ by a piecewiese constant function to fit the model parameters into the abstract 
 
 \section{Deep calibration}
 \label{sec:pricing}
-In the following sections we
-elaborate on the objectives and advantages of this two step calibration
-approach and present examples of neural network architectures, precise
-numerical recipes and training procedures to apply the two step calibration
-approach to a family of stochastic volatility models. We also present some
-numerical experiments and report the learning errors compared to chosen parameters of the synthetic data.
+In this chapter, we explore the rationale and benefits of a two-step calibration method
+introduced by Horvath, Muguruza and Mehdi (\cite{HMM19}).
 
-There are several advantages of separating the tasks of pricing and
-calibration. Above
-all, the most appealing reason is that it allows us to build upon the
-knowledge we have gained about the models in the past decades, which is of
-crucial importance from a risk management perspective. By its very design,
-\textbf{(i)} deep learning the \emph{price approximation} combined with
-\textbf{(ii)} deterministic calibration does not cause more headache to risk
-managers and regulators than the corresponding stochastic models do.
-Designing the training as described above demonstrates how deep learning
-techniques can successfully extend the toolbox of financial engineering,
-without imposing the need for substantial changes in our risk management libraries.
+We will discuss various neural network architectures,
+provide detailed numerical techniques,
+and explain the training processes used to implement this calibration method 
+for the rough Bergomi model.
+Additionally, we will present numerical experiments and analyze the
+learning errors in relation to the parameters used to generate synthetic data.
+
+The separation of pricing and calibration tasks offers numerous advantages.
+One of the primary benefits is that it allows us to utilize the extensive knowledge
+accumulated over decades about these models, which is vital for effective risk management.
+Specifically, integrating
+\textbf{(i)} deep learning for \emph{approximating prices} with
+\textbf{(ii)} deterministic calibration maintains the familiar framework for risk managers and regulators,
+similar to that of traditional stochastic models.
+This approach demonstrates how deep learning can expand the capabilities of financial engineering 
+without requiring substantial modifications to existing risk management systems.
 
 \subsection{One-step approach: Deep calibration by the inverse map}
 \label{sec:hernandez}
-A more and more popular approach in quantitative finance (and many other
-fields of engineering) is to develop purely data-driven frameworks, without
-relying on formal models. This approach leaves the meaning of calibrated network
-parameters unexplained, not to mention the ambiguity about the choice of the
-number of network parameters and network design. This can cause major
-challenges towards today's regulatory requirements. In addition, issues of
-generalizability -- how can one price exotic options in a network trained with
-vanilla option data, to give a simple example -- are difficult to analyse, and
-traditional paradigms of finance -- such as no arbitrage -- are hard to
-guarantee in the absence of a model.
+A growing trend in quantitative finance is the development of purely data-driven frameworks that do not depend on formal models.
+This method, however, leaves the interpretation of calibrated network parameters ambiguous
+and complicates the selection of the number of network parameters and the overall network design.
+Such ambiguity poses significant challenges to current regulatory standards,
+such as the recently published EU AI Act, which emphasizes the explainability of AI systems.
+Additionally, questions of generalizability arise—such as how to price exotic options
+using a network trained on vanilla option data. Moreover, traditional financial paradigms,
+like the no-arbitrage condition, are difficult to ensure without a formal model.
 
-A second, more model based approach was proposed in the pioneering work of
-Hernandez \cite{Hernandez}, followed by several other authors such as
-Stone~\cite{Stone}, Dimitroff, R\"oder and Fries~\cite{HestonConvolutional} and
-many others. A main characteristic of the neural network proposed by
-\cite{Hernandez} is that option price approximation and parameter calibration
-are done in one step within the same network.
-Indeed, the idea is to directly learn the whole calibration problem, i.e., to
-learn the model parameters as a function of the market prices (typically
-parametrized as implied volatilities). In the formulation of
-Section~\ref{sec:an-abstract-view}, this means that we learn the mapping
+An alternative, more model-centric approach was introduced in the seminal work of Hernandez \cite{Hernandez},
+and subsequently advanced by other researchers such as Stone~\cite{Stone},
+Dimitroff, Röder, and Fries~\cite{HestonConvolutional}, among others.
+A key feature of the neural network proposed by Hernandez is that it
+integrates option price approximation and parameter calibration into a single-step process within the same network.
+This approach involves directly learning the entire calibration problem
+by mapping market prices (usually parameterized as implied volatilities) to model parameters.
+Formally, using the notation introduced in Section~\ref{sec:model-calibration}, this means learning the mapping:
 \begin{equation*}
-  \Pi^{-1}: \left( \mathcal{P}(\zeta) \right)_{\zeta \in Z^\prime} \mapsto \widehat{\theta}.
+\Pi^{-1}: \left( \mathcal{P}(\zeta) \right) \mapsto \widehat{\theta}.
 \end{equation*}
-More precisely, \cite{Hernandez} trains a deep neural network based on
-labelled data $(x_i, y_i)$, $i = 1, \ldots, N$, with
-\begin{equation*}
-  x_i = \left( \mathcal{P}(\zeta) \right)_{\zeta \in Z^\prime_i}
-\end{equation*}
-for day $t_i$ (in the past) and the corresponding labels
-\begin{equation*}
-  y_i = \widehat{\theta}_i,
-\end{equation*}
-obtained from calibrating the model to the market data $y_i$ using traditional
-calibration routines. The number of labelled data points $N$ is, of course,
-limited to the amount of (reliable) historical market price data available.
 
-In spite of the promising results by Hernandez \cite{Hernandez} the main
-drawback of this approach, as Hernandez observes, is the lack of control on
-the function $\Pi^{-1}$. Furthermore, from a risk management
-perspective one has no guarantee how well the learned mapping of
-$\Pi^{-1}$ will solve the calibration problem when exposed to unseen
-data. In fact, this is the behaviour observed in Hernandez \cite{Hernandez},
-since the out of sample performance tends to differ from the in sample one,
-suggesting a not fully satisfactory generalisation of the learned map. We
-recover the same behaviour of the inverse map in our own experiments, which we
-included in Appendix \ref{sec:Inverse Map}.
+More specifically, Hernandez's method involves training a deep neural network using labeled data $(x_i, y_i)$, $i = 1, \ldots, N$, where:
+\begin{equation*}
+x_i = \left( \mathcal{P}(\zeta) \right)_{\zeta \in Z^\prime_i}
+\end{equation*}
+for each day $t_i$ in the historical dataset, and the corresponding labels:
+\begin{equation*}
+y_i = \widehat{\theta}_i,
+\end{equation*}
+are derived from calibrating the model to the market data $y_i$ using traditional calibration methods. The number of labeled data points $N$ is inherently limited by the availability of reliable historical market data.
+
+Despite the promising results shown by Hernandez \cite{Hernandez}, a major drawback of this approach
+is the lack of control over the function $\Pi^{-1}$.
+From a risk management perspective, there is no assurance that the learned mapping $\Pi^{-1}$ will accurately
+solve the calibration problem for new, unseen data.
+Hernandez noted this limitation, as the out-of-sample performance often diverges from the
+in-sample results, indicating an incomplete generalization of the learned mapping.
+Bayer et al (\cite{BHMST19}) confirmed this and replicated similar behavior,
+with the inverse mapping showing inconsistencies when applied to new data.
 
 \subsection{Two-step approach: Learning the implied volatility map of models}
 \label{sec:separation}
 
-The two step approach is somewhere mid-way between a sole reliance on
-traditional pricing methods (Monte Carlo, finite elements, finite differences,
-Fourier methods, asymptotic methods etc.) and the direct approach described
-above that calibrate directly to the price data. Here, one separates the
-calibration procedure as described in Section~\ref{sec:an-abstract-view}
-\textbf{(i)} We first learn (approximate) the pricing map by a neural network
-that maps parameters of a stochastic model to prices or implied
-volatilities. In other words, we set up and train (off-line) a neural network
-to learn the pricing map $P$.  In a second step \textbf{(ii)} we calibrate
-(on-line) the model -- as approximated by the neural network trained in step
-\textbf{(i)} -- to market data using a standard calibration routine. To
-formalise the two step approach, for an option parametrized by $\zeta$ and a
-model $\mathcal{M}$ with parameters $\theta \in \Theta$ we write
-$\widetilde{P}(\theta, \zeta) \approx P(\theta, \zeta)$ for the approximation
-$\widetilde{P}$ of the true pricing map $P$ based on a neural network. Then,
-in the second step, for a properly chosen distance function $\delta$ (and a
-properly chosen optimization algorithm) we calibrate the model by computing
-\begin{equation}\label{eq:ModelCalibration}
-  \widehat{\theta} = \argmin_{\theta \in \Theta} \delta\left( \left(
-      \widetilde{P}(\theta, \zeta) \right)_{\zeta \in Z^\prime}, \left(
-      \mathcal{P(\zeta)} \right)_{\zeta \in Z^\prime} \right).
+The two-step calibration method strikes a balance between relying solely on traditional pricing techniques
+(like Monte Carlo simulations, finite elements, finite differences, Fourier methods, and asymptotic approaches)
+and the direct approach that directly calibrates to price data.
+This method separates the calibration process into distinct phases as outlined in Section~\ref{sec:model-calibration}.
+
+\textbf{(i)} In the first phase, we approximate the pricing map using a neural network that maps the parameters of a stochastic model to prices or implied volatilities. This involves setting up and training a neural network offline to learn the pricing map $P$.
+
+\textbf{(ii)} In the second phase, we calibrate the model online using the neural network from the first step, applying standard calibration routines. For an option parameterized by $\zeta$ and a model $\mathcal{M}$ with parameters $\theta \in \Theta$, the neural network provides an approximation $\widetilde{P}(\theta, \zeta)$ of the true pricing map $P(\theta, \zeta)$. Calibration is then performed by minimizing a distance function $\delta$, using an appropriate optimization algorithm:
+\begin{equation}\label{eq
+}
+\widehat{\theta} = \argmin_{\theta \in \Theta} \delta\left( \left( \widetilde{P}(\theta, \zeta) \right){\zeta \in Z^\prime}, \left( \mathcal{P}(\zeta) \right){\zeta \in Z^\prime} \right).
 \end{equation}
-In principle, this method is not unlike traditional calibration routines, as
-the true option price has to be numerically approximated for all but the most
-simple models. This particular approximation method tends to be orders of
-magnitudes faster compared to other numerical approximation methods for all
-tested models. In particular, note that the (slow) training stage of the
-neural network itself only has to be done once. We will come back to
-comparisons of actual computational times in the numerical section of this
-paper. 
 
-At this stage, we note that the deep calibration routine is not yet specified
-in any details: apart from purely numerical details such as the choice of the
-architecture of the neural networks, the loss functions and optimization
-algorithms of both the training of the neural networks in stage \textbf{(i)}
-and the actual calibration in stage \textbf{(ii)}, one particularly important
-choice is whether the neural network learns implied volatilities of individual
-options or rather a full implied volatility surface. Before discussing these
-details, let us already highlight some of the differences to the one-step
-approach of \cite{Hernandez}. While the one-step approach is probably marginally
-faster, we see the main benefit of the two-step approach in the increased
-stability, which is influenced by two key differences:
+This approach is similar to traditional calibration methods, as numerical approximation of the true option price
+is necessary for all but the simplest models.
+However, the neural network-based approximation tends to be significantly faster than other numerical methods for all tested models.
+Notably, the slow training phase of the neural network only needs to be completed once.
+Detailed comparisons of computational times will be provided in the numerical section (\ref{sec:implementation}) of this paper.
+
+At this juncture, we note that the deep calibration process is yet to be fully detailed. Apart from numerical considerations such as the neural network architecture, loss functions, and optimization algorithms used in both the training phase (stage \textbf{(i)}) and the calibration phase (stage \textbf{(ii)}), an important choice is whether the neural network should learn the implied volatilities of individual options or the entire implied volatility surface.
+
+Before diving into these specifics, it is useful to highlight some distinctions from the one-step approach by Hernandez \cite{Hernandez}. While the one-step method might be slightly faster, the two-step approach offers increased stability due to two main factors:
+
 \begin{itemize}
-\item As the neural network is only responsible for option pricing in the
-  model, synthetic data can (and should) be used for training. Hence, we can
-  easily increase the number of training data, and the training data are
-  completely unpolluted from market imperfections.
-\item The two-step approach induces a natural decomposition of the overall
-  calibration error into a pricing error (from the neural network) and a model
-  misfit to the market data. Hence, the performance of the neural network
-  itself is generally independent of changing market regimes -- which might,
-  of course, change the suitability of the model under consideration.
+\item The neural network focuses solely on option pricing within the model, allowing for the use of synthetic data for training. This enables an increase in the volume of training data, ensuring that the data remains unaffected by market imperfections.
+\item The two-step approach naturally separates the overall calibration error into two components: pricing error (from the neural network) and model misfit to the market data. Consequently, the performance of the neural network is generally robust to changes in market conditions, although the suitability of the model itself may vary with market regimes.
 \end{itemize}
-These points, in particular, imply that frequent re-training of the neural
-network is not needed in the two-step approach.
 
+The concept of the two-step approach is evident in various contributions within the literature.
+For instance, De Spiegeleer, Madan, Reyners, and Schoutens~\cite{MadanSchoutens},
+as well as McGhee~\cite{McGhee}, have explored similar frameworks.
+Early research by Hutchinson, Lo, and Poggio~\cite{Hutchison94},
+and more recent studies by Culkin and Das~\cite{CulcinDas17},
+where deep neural networks are employed to learn the Black-Scholes formula,
+can be seen as instances of the first step in the two-step approach within the Black-Scholes setting.
+Additionally, Ferguson and Green~\cite{FG18} investigate the first step of this approach for basket options
+in a lognormal context, noting that the neural network not only provides a smoothing effect but also enhances
+accuracy compared to Monte Carlo prices.
 
+In this section, we discuss the benefits of the two-step approach
+and analyze the objective function to improve learning performance.
 
-
-\subsubsection{The two step approach: Pointwise training and implicit and grid-based training}
-
-The underlying principle of the two-step approach appears in one way or another in a number of related contributions 
-De Spiegeleer, Madan, Reyners and Schoutens~\cite{MadanSchoutens} and McGhee \cite{McGhee}. In fact, the early works of Hutchinson, Lo and Poggio \cite{Hutchison94} and the more recent work of Culkin and Das \cite{CulcinDas17}--where Deep Neural Networks are applied neural to learn the Black-Scholes formula--can be recognised as Step \textbf{(i)} of the two-step approach in a Black-Scholes context.
-Also Ferguson and Green \cite{FG18} examine Step \textbf{(i)} of the two-step approach in \cite{FG18} for basket options in a lognormal context and observe that the network even has a smoothing effect and increased accuracy in comparison to the underlying Monte Carlo prices. In this section, we examine its advantages and present an analysis of the objective function with the goal to enhance learning performance. Within this framework, the pointwise approach has the ability to asses the quality of $\widetilde{P}$ using Monte Carlo or PDE methods, and indeed it is superior training in terms of robustness.
-\vspace*{0.5cm}\\ 
-\textbf{Pointwise learning}\\
-
-\begin{enumerate}
-\item[Step (i):] Learn the map
-  $\widetilde{P}(\theta,T,k)=\widetilde{\sigma}^{\mathcal{M}(\theta)}(T,k)$ -- that is in equation \eqref{eq:ModelCalibration} above we have $\zeta = (T,k)$. In the case of vanilla options ($\zeta = (T,k)$) one can rephrase this learning objective as an implied volatility problem:
- In the implied volatility problem the more informative implied volatility map $\widetilde{\sigma}^{\mathcal{M}(\theta)}(T,k)$  is learned, rather than call- or put option prices $\widetilde{P}(\theta,T,k)$. We denote the
-  artificial neural network by $F(w;\theta, \zeta)$ as a function of the
-  weights $w$ of the neural network, the model parameters $\theta$ and the
-  option parameters $\zeta$. The optimisation problem to solve is the
-  following:
-  \begin{equation}
-    \label{eq:general_loss}
-    \widehat{\omega}:= \argmin_{w\in\mathbb{R}^n}\sum_{i=1}^{N_{\mathrm{Train}}}
-    \eta_i(\widetilde{F}(w;\theta_{i},T_i,k_i)-\widetilde{\sigma}^{\mathcal{M}}(\theta_{i},T_i,k_i))^2. 
-  \end{equation}
-  where $\eta_i\in\mathbb{R}_{>0}$ is a weight vector.
-\item[Step (ii):] Solve the classical model calibration problem 
-$$\widehat{\theta} \coloneqq \argmin_{\theta\in\Theta}
-  \sum_{j=1}^{m} \beta_j(\widetilde{\sigma}^{\mathcal{M}(\theta)}(\theta,T_j,k_j)-\sigma^{\mathrm{MKT}}_{\mathrm{BS}}(k_j,T_j))^2.$$
-\end{enumerate}
-for some user specified weights $\beta_j\in\mathbb{R}_{>0}$, where now the (numerical approximation of the) option price $\widetilde{P}(\theta,T,k)$  resp. implied volatility $\widetilde{\sigma}^{\mathcal{M}(\theta)}(T,k)$ is replaced by the DNN approximation $\widetilde{F}(\widehat{\omega}; \theta, T, k)$ obtained in Step \textbf{(i)}.
-
-
-
-The critical part is, of course, the first step, as the second one merely
-corresponds to classical calibration against liquid options. For the first
-step, key issues are the choice of training data and the architecture of the
-neural network. Regarding the training data, the general idea is as follows:
-\begin{enumerate}
-\item Choose realistic \emph{``prior''} distributions for both model
-  parameters $\theta$ and option parameters $\zeta$ ($= (T,k)$ in the above
-  notation). The point is that many theoretically possible parameters are very
-  unlikely to ever occur in real markets, for both model and option
-  parameters. Hence, it is wasteful to spend resources to learn the pricing
-  map for, say, maturities in the range of hundreds of years. The simplest
-  choice is to simply impose uniform distributions on truncated parameter
-  ranges, but nothing prevents more ``informed'' possibilities, for instance
-  taking into account historical distributions of estimated model parameter
-  values or observed option parameter values.
-\item Simulate model and option parameters according to the distribution
-  chosen before and compute the corresponding option price or implied
-  volatility, which serves as label for the respective parameter vector. The
-  computation can be done for any available numerical method, for instance
-  Monte Carlo simulation. As an aside, this mechanism can, of course, be used
-  to produce training, testing and validation data in the sense of the machine
-  learning literature.
-\end{enumerate}
-
-\begin{remark}
-  Note that the above mentioned ``informed'' parameter distributions could
-  also be encoded as weights into the loss function for the training of the
-  neural network.
-\end{remark}
-
-\begin{remark}
-  Instead of simulation of parameter values, we could also consider
-  deterministic grids in the parameter space. In very high dimensional
-  parameter spaces this probably becomes unfeasible due to the curse of
-  dimensionality, but in the current context this approach may very well
-  improve training of the neural network. We leave a comparison to future
-  work.
-\end{remark}
+Bayer et al. (\cite{BHMST19}) have highlighted several implementations of the two-step approach,
+including pointwise and grid-based learning, which is a further development of the pointwise approach.
+In our paper, we focus specifically on the implicit and grid-based learning methodologies.
 
 \vspace*{0.5cm}
 \textbf{Implicit \& grid-based learning}
+This approach is characterized by the implicit form of the pricing map being based
+on storing the implied volatility surface as an image given by a grid of ``pixels''.
+This image-based representation has a formative contribution in
+the performance of the network we present in Section \ref{sec:implementation}. 
 
-We take this idea further and design an implicit form of the pricing map that
-is based on storing the implied volatility surface as an image given by a grid
-of ``pixels''. This image-based representation has a formative contribution in
-the performance of the network we present in Section \ref{sec:Numerics}. 
-
-Let us denote by
-$\Delta:=\{k_i,T_j\}_{i=1,\;j=1}^{n,\;\;\;\;m}$ a fixed grid of strikes and
-maturities, then we propose the following two step approach:
+Let 
+$\Delta:=\{k_i,T_j\}_{i=1,\;j=1}^{n,\;\;\;\;m}$
+denote a fixed grid of strikes and
+maturities.
+Bayer et al. (\cite{BHMST19}) proposed the following two step approach:
 \begin{enumerate}
 \item[Step (i):] Learn the map
   $\widetilde{F}(\theta)=\{\sigma^{\mathcal{M}(\theta)}_{BS}(T_i,k_j)\}_{i=1,\;j=1}^{n,\;\;\;\;m}$
@@ -448,7 +360,7 @@ maturities, then we propose the following two step approach:
   where $n,m\in\mathbb{N}$ are chosen appropriately (see Section
   \ref{sec:architecture}) on a predefined fixed grid of maturities and
   strikes. $\widetilde{F}$ takes values in $\mathbb{R}^L$  where
-  $L=\textrm{strikes}\times \textrm{maturities} = nm$.
+  $L=\textrm{strikes}\times \textrm{maturities} = n \times m$.
   The optimisation problem in the image-based implicit learning
   approach is:
   \begin{equation}\label{eq:gridbased_loss}
@@ -463,150 +375,73 @@ for some user specified weights $\beta_j\in\mathbb{R}_{>0}$
 \end{enumerate}
 
 
-The data generation stage for the image-based approach works as in the
-point-wise approach, except that the option parameters $\zeta = (T,k)$ are, fixed and are no longer part of the learning algorithms -- except
-implicitly in the output/labels of the neural network. This is why they appear in the general objective function of pointwise learning \eqref{eq:general_loss} but no longer appear in the objective function \eqref{eq:gridbased_loss} of the grid-based learning  above.
-In practice, we choose a grid $\Delta$ of size $8\times 11$. By evaluating the implied volatility surface along $8\times 11$ gridpoints with $40.000$ different parameter combinations in $\Theta$ we effectively evaluate the ``fit" of the surface as a whole. In our experiments we chose a $8\times 11$ grid for practical reasons, but we are by no means limited to this number. For example, to obtain even higher accuracy, one could also choose a coarser grid, which would require longer learning time, but recall that learning only has to be done once. One advantage of a grid-based sampling is that one can re-use the same set of generated Monte Carlo paths along grid points. Once a grid is fixed one can also easily refine the grid by adding further refined points to it using the same set of Monte Carlo paths (evaluated at more time points).
+The data generation stage for the image-based approach works as in the point-wise approach:
+\begin{enumerate}
+\item Choose realistic “prior” distributions for both model parameters $\theta$ and option parameters $\zeta$
+ ($= (T, k)$ in the above notation). The point is that many theoretically possible parameters
+are very unlikely to ever occur in real markets, for both model and option parameters. Hence,
+it is wasteful to spend resources to learn the pricing map for, say, maturities in the range of
+hundreds of years. The simplest choice is to simply impose uniform distributions on truncated
+parameter ranges, but nothing prevents more “informed” possibilities, for instance taking
+into account historical distributions of estimated model parameter values or observed option
+parameter values.
+\item Simulate model and option parameters according to the distribution chosen before and com-
+pute the corresponding option price or implied volatility, which serves as label for the respec-
+tive parameter vector. The computation can be done for any available numerical method,
+for instance Monte Carlo simulation. As an aside, this mechanism can, of course, be used to
+produce training, testing and validation data in the sense of the machine learning literature.
+\end{enumerate}
+
+However, there are some deviations from the point-wise approach:
+The option parameters $\zeta = (T,k)$ are fixed and are no longer part of the learning algorithms 
+-- except implicitly in the output/labels of the neural network.
+
+
+In practice, we choose a grid $\Delta$ of size $8\times 11$, i.e., 8 different maturities and 11 different strikes.
+By evaluating the implied volatility surface along $8\times 11$ gridpoints with $80.000$ different parameter combinations in $\Theta$
+we effectively evaluate the ``fit" of the surface as a whole.
+In our experiments we chose a $8\times 11$ grid for practical reasons, but we are by no means limited to this number.
+For example, to obtain even higher accuracy, one could also choose a coarser grid, which would require longer learning time, but recall that learning only has to be done once. One advantage of a grid-based sampling is that one can re-use the same set of generated Monte Carlo paths along grid points. Once a grid is fixed one can also easily refine the grid by adding further refined points to it using the same set of Monte Carlo paths (evaluated at more time points).
 
 Clearly, the neural network does depend on the grid $\Delta$ of option
 parameters $\zeta$. Hence, we need to interpolate between gridpoints in order to be able to calibrate (in the calibration Step \textbf{(ii)}) also to such options, whose
 maturity and strike do not exactly lie on the grid $\Delta$. 
-While in the pointwise training the \textbf{interpolation between sampling points} is done by the network $\widetilde{F}(\theta)$ automatically (both in the model parameter space $\Theta$ and along the implied volatility surface in $\mathbb{K}\times \mathbb{T}$), in the grid-based implicit learning the network is only used for interpolation in the parameter space $\Theta$, and it is implicit in the space dimension, that is, --based on smoothness assumptions of the implied volatility surface-- we
-interpolate between gridpoints of the implied-volatility surface manually, using appropriate splines. This indirect dependence of the trained network on $\Delta$ is alluded to by the name ``implicit learning''.
-\vspace*{0.2cm}
-
-
-\textbf{Implicit smile-based learning: \\
---And outlook towards an implicit learning with more elaborate grids and tessalations of the IV surface--}\\ We note that McGhee \cite{McGhee} follows an \emph{implicit} approach  for the lognormal SABR model, which lies somewhere between the
-pointwise and the image-based approaches of Step \textbf{(i)}: There, the inputs
-are $(\theta^{\mathrm{SABR}}, T, k_1, \ldots, k_{10})$, and there are ten volatility
-outputs ${\sigma_1, \ldots, \sigma_{10}}$ per maturity $T$. 
-Since between the reference points of the smile McGhee \cite{McGhee} also interpolates (by splines) based on a smoothness assumption of implied volatilities, we also refer to this approach as \emph{implicit} training.
-The reference points $k_1, \ldots, k_{10}$ on the volatility surface are determined as a direct functional of the model parameters $\theta^{\mathrm{SABR}}$ and of the maturity $T$, that is the learning is done slice-by slice. 
-This sampling technique showcases an excellent working example of a \emph{representative functional sampling} on the surface, where more samples are taken in certain regions of the surface, to ensure a good accuracy of the training in those regions (e.g. regions with higher liquidity). Though the sampling of the strikes in \cite{McGhee} is bespoke to the SABR model, it motivates the idea of \emph{representative sampling grid (or tessalation net)}, which would be desirable to achieve also in a model agnostic context. We note that the introduction of the weight vectors $\eta_i \in \mathbb{R}_{>0}$ in the objective function \eqref{eq:gridbased_loss} of the grid-wise approach has a similar effect as a higher sampling frequency of a neighbourhood/point.
-
-\subsubsection{The role of the objective function: Pointwise training versus implicit and grid-based training}
-
-Comparing the pointwise approach (characterised by the general objective function \eqref{eq:general_loss}) and the image-based approach (characterised
-by the objective function \eqref{eq:gridbased_loss}), we find that
-both of them can be advantageous in certain situations. We highlight the connection between the two below, and
-elaborate on some of the respective advantages of each approach.\\
-
-Equation \eqref{eq:gridbased_loss} can be brought to the form of
-\eqref{eq:general_loss} equation by inserting (into \eqref{eq:general_loss})
-the specification values $\theta = \theta^\prime$, with
-$$
-\theta^\prime_1 = \theta_1, \ldots, \theta^\prime_L = \theta_1,
-\theta^\prime_{L+1} = \theta_2, \ldots,
-$$
-and recalling that
-$L=\textrm{strikes}\times \textrm{maturities}$ and
-$N_{\mathrm{Train}}=N_{\mathrm{Train}}^{\mathrm{reduced}} \times L$. Hence,
-the pointwise approach is more general than the image-based one.
-
-
-With this in mind we make the general note, many of the various advantages and disadvantages of both
-approaches can, in principle, be mitigated by careful choice of the data
-generation mechanism (of the training and validation datasets) and the loss
-function in the training.
-
-\begin{itemize}
-\item The biggest difference, between pointwise and image based implicit learning procedures
-is  that image based implicit learning requires an outside (implicit) interpolation
-between the learned implied volatilities in order to compute the implied
-volatility of an option with an arbitrary strike or maturity, not aligned
-with the grid. At face value, this is of course an advantage of the
-pointwise (explicit) approach, where the interpolation is rather performed by the deep
-neural network. On the other hand, we note that the function
-$(T,k) \mapsto \sigma^{\mathcal{M}}(\theta; T,k)$ (for fixed model
-parameters $\theta$) is usually a very well understood smooth function. (At
-least for useful models, as the market implied vol surface arguably is nice
-and smooth.) This is not necessarily true for
-$\theta \mapsto \sigma^{\mathcal{M}}(\theta; T,k)$, which is not nearly as
-well understood for more modern sophisticated models such as rough Bergomi. Hence, we
-have much more confidence in applying standard interpolation in $(T,k)$
-rather than in $\theta$, which also lives in a higher dimensional
-space. Hence, the outside interpolation may, in practice, not cause any
-difficulties. 
-
-\item Indeed, this very same structure induces a reduction of variance in the
-training data for the image-based approach as compared to the pointwise
-approach. Formally speaking, in the image based approach only the
-model parameters are sampled, while the strike and maturities of the
-underlying instruments are deterministic. As a side note, keep in mind that we
-should always compare the two approaches based on a fixed number $N_{\mathrm{Train}}$
-of total training data.
-
-\item It is also easier to take into account the structure of real financial data
-into the data generation for the pointwise approach by adjusting the (random) sampling distribution on the surface accordingly. Clearly, not all options
-are equally \emph{important} for the purpose of calibration, but we would like
-to concentrate on liquid options. It is easy to adjust the sampling
-distribution for strikes and maturities in the pointwise approach to take into
-account historical numbers of liquidity. In the grid-based approach, this can to some extent be taken into account by the choice of the weight vector $\eta_i \in \mathbb{R}_{>0}$ in \eqref{eq:gridbased_loss}, or more accurately taken into account by using non-uniform, non-tensorized, or bespoke quasirandom sampling
-grids, with higher density of points in regions with higher liquidity. 
-
-
-\item The image-based approach may be seen as an efficient dimension-reduction
-technique as compared to the pointwise one. Indeed, as dimensions are shifted
-from the input of the neural network to the output, the learning task becomes
-easier since lower-dimensional. Of course, the price we pay is that we only
-learn the values of the implied volatilities on a fix grid $\Delta$ of option
-parameters. In this example, this price is, however, worth paying since the
-regularity of the volatility surface is well understood. This implies that we
-know very well the number and location of grid points required to get good
-fits globally in terms of the chosen interpolation.
-\end{itemize}
-
-In the particular calibration example presented in Section \ref{sec:Numerics} below, the image-based
-approach performed somewhat better than the pointwise approach, which indicates
-that the variance and dimension reduction features may be more important than
-the other aspects in the above comparison.
-
-\begin{remark}
-  \label{rem:chebyshev}
-  In principle, the two-step approach is also amenable to other numerical
-  interpolation methods. For instance, we could also use Chebyshev
-  interpolation to approximate model implied volatilities such as \cite{Glau19}.
-\end{remark}
-\begin{remark}
-  \label{rem:chebyshev-2}
-  In line with Remark~\ref{rem:chebyshev}, we note that the image-based
-  approach (in conjunction with the outside interpolation) is a hybrid between
-  a pure DNN approximation such as the point-wise approach and a standard
-  polynomial interpolation method, such as Chebyshev approximation, see
-  \cite{Glau19} for example. Of course, other, more specialized interpolation
-  methods on the implied volatility surface are also possible, for instance
-  using the SVI volatility parameterization, see for example \cite{Itkin14}.
-\end{remark}
-
-
+In the grid-based implicit learning the network is only used for interpolation in the parameter space $\Theta$,
+and it is implicit in the space dimension, that is,
+--based on smoothness assumptions of the implied volatility surface--
+we interpolate between gridpoints of the implied-volatility surface manually, using appropriate splines.
+This indirect dependence of the trained network on $\Delta$ is alluded to by the name ``implicit learning''.
 
 \section{Practical implementation}
 \label{sec:implementation}
-We start by describing the approximation network (Step \textbf{(i)} of Section \ref{sec:pricing}  with objective functions \eqref{eq:general_loss} and \eqref{eq:gridbased_loss}) and leave the discussion of calibration (Step \textbf{(ii)}) for Section \ref{sec:calibrationStep} below.
-While several realted works \cite{Hutchison94, CulcinDas17, McGhee} have demonstrated that learning the pricing map (Step \textbf{(i)}) in the Black-Scholes model and in certain clasical stochastic volatility models (such as the lognormal SABR model in \cite{McGhee}) can be done to a satisfactory accuracy with a single hidden layer, the situation is--as often--more delicate in the case of rough volatility models. Since these models are highly nonlinear nature, they also require deeper networks for an accurate approximation of their pricing functional.
+We start by describing the different configurations of the approximation network (Step \textbf{(i)} 
+of Section \ref{sec:pricing} with objective function \eqref{eq:gridbased_loss})
+and leave the discussion of calibration (Step \textbf{(ii)}) for Section \ref{sec:calibrationStep} below.
+Since the rough volatility models are of highly nonlinear nature,
+they also require deeper networks for an accurate approximation of their pricing functional.
 
 \subsection{Network architecture and training}
-
 \label{sec:architecture}
-We present the architecture used for the grid-based approach in some detail,
-as this approach was used for most of the numerical examples below.
+In our reworked code, which is based on the original implementation of Horvath, Muguruza and Mehdi (\cite{HMM19}),
+we have first made slight adaptions to get the code working on newer Python versions,
+as well as with newer versions of the machine learning libraries used, such as Keras and TensorFlow.
+We made further adaptions so that the calibration can easily be tested using different neural networks configurations,
+which are stored in a unified and simple format.
+
+We present an overview of the different architectures used for the grid-based approach in some detail, but first we 
 \begin{enumerate}
-\item A fully connected feed forward neural network with 3 hidden layers
-  and $30$ nodes on each layers;
+\item All architectures utilize a fully connected feed forward neural network, with the same input and output dimensions
 \item Input dimension = $n$, number of  model parameters
-\item Output dimension = 11 strikes$\times$ 8 maturities for this experiment, but this choice of grid can be enriched or modified.
-\item The three inner layers have $30$ nodes each, which adding the
-  corresponding biases results on a number $$(n+1)\times30+ 3\times
-  (1+30)\times 30+(30+1)\times88=30 n+5548$$ of network parameters to
-  calibrate.
-\item We choose the Elu $\sigma_{\mathrm{Elu}}=\alpha(e^x-1)$ activation
-  function for the network.
+\item Output dimension = 11 strikes$\times$ 8 maturities for this experiment
+\item The "base" model from Horvath, Muguruza and Mehdi (\cite{HMM19}) has four hidden layers, each with 30 neurons, and an Elu $\sigma_{\mathrm{Elu}}=\alpha(e^x-1)$ activation
+  function for the network
+\item Other configurations include a varying number of hidden layers (1, 2, 3, 10, 20), using the Relu function instead of Elu, and varying number of neurons (40, 50 and 60)
 \end{enumerate}
 
-We train the neural network using gradient descent, the so-called `Adam'
-minibatch training scheme due to Kingman and Ba \cite{KBAdam}, which is a
-version of the Stochastic Gradient Descent algorithm. In the following, $w$ denotes the set of parameters --
+We train the neural network using gradient descent,
+the so-called `Adam' minibatch training scheme due to Kingman and Ba \cite{KBAdam},
+which is a version of the Stochastic Gradient Descent algorithm (we also tested others, but quickly found 'Adam' to be the best).
+In the following, $w$ denotes the set of parameters --
 weights and biases -- of a neural network $F = F(w,x)$.  Given parameters
 $0 \leq \beta_{1}, \beta_{2} < 1, \epsilon$, $\alpha$, initial iterates
 $u_{0} := 0, v_{0} := 0, w_{0}\in\Omega$, the Adam scheme has the following
@@ -619,12 +454,45 @@ iterates:
   w_{n+1} & := w_{n} - \alpha \dfrac{u_{n+1}}{1 - \beta_{1}^{n+1}} \dfrac{1}{\sqrt{v_{n} / (1 - \beta_{2}^{n+1})} + \epsilon}.
 \end{align*}
 
+Furthermore, we used mini-batches in the optimization. After we tested several different batch size values (ranging from 1 - 300),
+we reverted to using the same batch size as in Horvath, Muguruza and Mehdi (\cite{HMM19}) as larger batch sizes did not lead to
+any further performance improvements, just longer calibration times.
+For early stopping, we selected a number of epochs as 500, and to stop updating the network parameters
+if the error has not improved for 25 steps, same as Horvath, Muguruza and Mehdi (\cite{HMM19}).
+For the normalization of model parameters, we ended up using the same lower and upper bounds as well as using the same approach
+for the normalization of implied volatilities.
+
 \subsection{The calibration step}
 \label{sec:calibrationStep}
 
 Once the pricing map approximator $\widetilde{F}$  for the implied volatility
-is found, only the calibration step is left to solve. We use the
-Levenberg-Marquart algorithm as presented in Section~\ref{sec:an-abstract-view}.
+is found, only the calibration step is left to solve.
+In general, for financial models the pricing map $F$ is assumed to be smooth
+(at least $C^1$ differentiable) with respect to all its input parameters $\theta$.
+
+A standard necessary first order condition for optimality in (\ref{approximate_calibration_equation}) is that
+\begin{equation}\label{eq:first_order_condition}
+\nabla^{\theta} \delta \left( \widetilde{F}(\mathcal{M}(\theta), \zeta), \mathcal{P}^{MKT} (\zeta) \right) = 0,
+\end{equation}
+provided that the objective function is smooth.
+Then, a natural update rule is to move along the gradient via Gradient Descent, i.e.,
+\begin{equation}\label{eq:gradient_descent}
+\theta_{i+1} = \theta_{i} - \lambda \nabla^{\theta} \delta \left(F(\mathcal{M}(\theta_{i}), \zeta), P^{MKT}(\zeta) \right), \quad \lambda > 0.
+\end{equation}
+A common feature of gradient based optimization building on the above equation is the use of the gradient,
+hence its correct and precise computation is crucial for subsequent success.
+Examples of such algorithms are Levenberg-Marquardt \cite{Levenberg}, \cite{Marquardt},
+Broyden-Fletcher-Goldfarb-Shanno (BFGS) algorithm \cite{BFGHS}, L-BFGS-B [72] and SLSQP [51].
+
+The main advantage of the aforementioned methods is the quick convergence towards condition (\ref{eq:first_order_condition}).
+However, (\ref{eq:first_order_condition}) only gives necessary and not sufficient conditions for optimality,
+hence special care must be taken with non-convex problems.
+
+Alternatively, one could opt to use gradient-free optimizers such as the popular Nelder-Mead (\cite{NelderMead}) algorithm.
+At the cost of slower calculation times, these options will always identify global solutions, regardless of the objective function used.
+However, as in our approach we specifically chose an objective function that fulfills the critera of gradient-based optimizers,
+we did not test out any gradient-free optimizers.
+
 
 
 \appendix

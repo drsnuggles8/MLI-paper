@@ -24,36 +24,12 @@
 \usepackage{todonotes}
 \usepackage{parskip}
 
-\newcommand{\EE}{\mathbb{E}}
-\newcommand{\RR}{\mathbb{R}}
-\newcommand{\Ee}{\mathcal{E}}
-\newcommand{\Hh}{\mathcal{H}}
-\newcommand{\Nn}{\mathcal{N}}
-\newcommand{\Tt}{\mathcal{T}}
-\newcommand{\R}{\mathrm{R}}
-\newcommand{\F}{\mathrm{F}}
-\newcommand{\m}{\mathrm{m}}
-\newcommand{\VIX}{\mathrm{VIX}}
-\newcommand{\osig}{\overline{\sigma}}
-\newcommand{\ind}{1\hspace{-2.1mm}{1}}
 \newtheorem{definition}{Definition}
 \def\blue#1{\textcolor{blue}{#1}}
 \def\red#1{\textcolor{red}{#1}}
 \def\green#1{\textcolor{green}{#1}}
 \def\magenta#1{\textcolor{magenta}{#1}}
 \DeclareMathOperator*{\argmin}{\arg\!\min}
-
-% Commands
-\newcommand{\varphinn}{\varphi_\textrm{NN}}
-\newcommand{\varphitilde}{\tilde{\varphi}}
-\newcommand{\dd}{\ensuremath{\mathrm{d}}}
-\newcommand{\E}{\mathbb{E}}
-\newcommand*\colvec[3][]{
-	\begin{pmatrix}\ifx\relax#1\relax\else#1\\\fi#2\\#3\end{pmatrix}
-}
-
-\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
-\DeclareMathOperator{\diag}{diag}
 
 \begin{document}
 \title{Experiments on the neural architecture for deep calibration of (rough) stochastic volatility models}
@@ -149,10 +125,6 @@ allows an explainable neural network-based calibration method for rough volatili
 For a more complete review on the applications of machine learning for quantitative finance, we refer to Ludkovski \cite{Ludkovski}.
 In our work, we confirm their findings, bring their code to a more modern approach that will work with the latest Python versions and libraries.
 We also display and compare different neural network structures.
-
-% REMOVE/REWRITE THIS PART
-% rough vol models: \cite{AlosLeon, Fukasawa, GJR14}, we have
-% log realized volatility has H\"older regularity $\approx 0.1$ \cite{BLP16, GJR14}
 
 The paper is organised as follows:
 In Section~\ref{sec:model-calibration} we present an neural network-based point of view on model calibration in finance,
@@ -428,19 +400,23 @@ as well as with newer versions of the machine learning libraries used, such as K
 We made further adaptions so that the calibration can easily be tested using different neural networks configurations,
 which are stored in a unified and simple format.
 
-We present an overview of the different architectures used for the grid-based approach in some detail, but first we 
+We present an overview of the different architectures used for the grid-based approach in some detail, but first we give an overview of the  
 \begin{enumerate}
+\item Normalized parameters as input and normalized implied volatilities as output
+\item Train Set: 68,000 and Test Set: 12,000
+\item strikes = ${0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5}$
+\item maturities = ${0.1, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.0}$
+\item Training data samples obtained from Horvath, Muguruza and Mehdi (\cite{HMM19}), following the Algorithm 3.5 from Horvath, Jacquier and Muguruza (\cite{HJM17})
 \item All architectures utilize a fully connected feed forward neural network, with the same input and output dimensions
-\item Input dimension = $n$, number of  model parameters
-\item Output dimension = 11 strikes$\times$ 8 maturities for this experiment
 \item The "base" model from Horvath, Muguruza and Mehdi (\cite{HMM19}) has four hidden layers, each with 30 neurons, and an Elu $\sigma_{\mathrm{Elu}}=\alpha(e^x-1)$ activation
   function for the network
-\item Other configurations include a varying number of hidden layers (1, 2, 3, 10, 20), using the Relu function instead of Elu, and varying number of neurons (40, 50 and 60)
+\item Other configurations include a varying number of hidden layers (1, 2, 3, 10, 20), using the Relu function instead of Elu, and varying number of neurons (40, 50 and 60) linearly (we have not tested having one architecture where the number of neurons varies between the layers)
 \end{enumerate}
 
 We train the neural network using gradient descent,
 the so-called `Adam' minibatch training scheme due to Kingman and Ba \cite{KBAdam},
 which is a version of the Stochastic Gradient Descent algorithm (we also tested others, but quickly found 'Adam' to be the best).
+
 In the following, $w$ denotes the set of parameters --
 weights and biases -- of a neural network $F = F(w,x)$.  Given parameters
 $0 \leq \beta_{1}, \beta_{2} < 1, \epsilon$, $\alpha$, initial iterates
@@ -493,7 +469,141 @@ At the cost of slower calculation times, these options will always identify glob
 However, as in our approach we specifically chose an objective function that fulfills the critera of gradient-based optimizers,
 we did not test out any gradient-free optimizers.
 
+\subsection{Calibration outcomes for the different neural network configurations}
+\label{sec:outcomes}
+In the subsequent sections, we present the results obtained from various neural network configurations.
+Specifically, we compare the approximation errors of the neural networks with those of Monte Carlo simulations,
+utilizing the same dataset of 80,000 data points provided by Horvath, Muguruza, and Mehdi (\cite{HMM19}).
+The relative errors are expressed in terms of the mean, standard deviation, and maximum values.
+The performance of the base model is illustrated in Figure \ref{fig:base_model}.
+The outcomes for the other neural network configurations are depicted in Figures \ref{fig:1_layer} - \ref{fig:relu}.
 
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_base_model_1.png}
+  \caption{Relative errors for the baseline model, from Horvath, Muguruza and Mehdi (\cite{HMM19}), with 4 Layers.}
+  \label{fig:base_model}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_1_layer_5.png}
+  \caption{Relative errors for the 1 layer configuration.}
+  \label{fig:1_layer}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_2_layers_6.png}
+  \caption{Relative errors for the 2 layer configuration.}
+  \label{fig:2_layers}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_3_layers_7.png}
+  \caption{Relative errors for the 3 layer configuration.}
+  \label{fig:3_layers}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_10_layers_2.png}
+  \caption{Relative errors for the 10 layer configuration.}
+  \label{fig:10_layers}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_20_layers_3.png}
+  \caption{Relative errors for the 20 layer configuration.}
+  \label{fig:20_layers}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_40_neurons_8.png}
+  \caption{Relative errors for the 4 layer configuration, with 40 neurons per layer.}
+  \label{fig:40_neurons}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_50_neurons_9.png}
+  \caption{Relative errors for the 4 layer configuration, with 50 neurons per layer.}
+  \label{fig:50_neurons}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_40_neurons_10.png}
+  \caption{Relative errors for the 4 layer configuration, with 60 neurons per layer.}
+  \label{fig:60_neurons}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{../data/rBergomiTermStructureNNErrors_Model_relu_4.png}
+  \caption{Relative errors for the 4 layer configuration, with ReLu activation function.}
+  \label{fig:relu}
+\end{figure}
+
+Besides these figures, we computed three key statistics for each model:
+the average relative error across all strikes and maturities,
+the standard deviation of the relative error across all strikes and maturities,
+and the average maximum relative error across all strikes and maturities.
+These statistics are summarized in Table \ref{tab:model_performance}.
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{|c|c|c|c|}
+    \hline
+    & \begin{tabular}[c]{@{}c@{}}Avg. Rel. Error\\ (\%)\end{tabular} & \begin{tabular}[c]{@{}c@{}}Std. Dev. Rel. Error\\ (\%)\end{tabular} & \begin{tabular}[c]{@{}c@{}}Avg. Max Rel. Error\\ (\%)\end{tabular} \\ \hline
+    Base Model & 0.48\% & 0.58\% & 11.95\% \\ \hline
+    1 Layer & 1.06\% & 1.29\% & 20.52\% \\ \hline
+    2 Layers & 0.62\% & 0.79\% & 15.08\%\\ \hline
+    3 Layers & 0.47\% & 0.61\% & 12.98\%\\ \hline
+    10 Layers & 0.58\% & 0.66\% & 12.50\% \\ \hline
+    20 Layers & 0.80\% & 0.74\% & 12.12\% \\ \hline
+    40 Neurons & 0.43\% & 0.52\% & 11.38\% \\ \hline
+    50 Neurons & 0.38\% & 0.47\% & 10.80\%\\ \hline
+    60 Neurons & 0.35\%& 0.38\% & 8.54\%\\ \hline
+    ReLu & 25.26\% & 24.10\% & 186.32\%\\ \hline
+  \end{tabular}
+  \caption{Model Performance Metrics}
+  \label{tab:model_performance}
+\end{table}
+
+The analysis reveals that employing the ReLU function is suboptimal (see Figure \ref{fig:relu}).
+This observation aligns with the universal approximation theorem for derivatives by Hornik, Stinchcombe, and White \cite{UniversalApprox},
+as the ReLU activation function does not belong to $C^l(\mathbb{R})$ for any $l>0$, in contrast to the ELU function.
+
+Additionally, increasing the number of layers does not yield substantial improvements.
+While the average maximum relative error decreases, the average relative error actually increases compared to the base model.
+Notably, the base model with four layers outperforms models with fewer layers,
+although the benefits beyond three layers are marginal.
+The performance gains from increasing layers from one to two are significantly greater than those from increasing from two to three,
+indicating diminishing returns.
+
+Increasing the number of neurons per layer demonstrates tangible benefits;
+however, these benefits also exhibit diminishing returns.
+Specifically, increasing beyond 60 neurons (mislabelled as 40 neurons in Figure \ref{fig:60_neurons})
+does not result in substantial further improvements.
+
+Furthermore, the increase in neurons leads to a corresponding increase in calibration time,
+making excessive neuron counts less desirable, particularly in contexts such as fixed income desks where calibration time is critical.
+
+Calibration times for ten different models were plotted, confirming the expected trend:
+a higher number of layers or neurons increases calibration time.
+For instance, the model with 20 layers required up to ten times longer to calibrate than the base model.
+In comparison, increasing the number of neurons from 30 to 60 resulted in a minor increase in calibration time,
+less than one millisecond longer when using the Levenberg-Marquardt algorithm, which consistently proved to be the fastest.
+
+Comprehensive results, including relative errors for Levenberg-Marquardt optimal parameters,
+are documented in the accompanying Jupyter notebook. These details were omitted here due to the lack of significant new information.
+
+Further experiments, such as varying the number of neurons between the layers, or trying out different learning rates, is left to future research.
+Overall, we confirmed that the models introduced in \cite{HMM19} can provide a great fit and allow to calibrate
+the rough Bergomi model with piecewise constant forward variance curve quickly and accurately.
 
 \appendix
 \newpage
@@ -501,14 +611,6 @@ we did not test out any gradient-free optimizers.
 \bibitem{AlosLeon}E. Al\`os, J. Le\'on and J. Vives. 
 On the short-time behavior of the implied volatility for jump-diffusion models with stochastic volatility. 
 \textit{Finance and Stochastics}, {\tt 11}(4), 571-589, 2007.
-
-\bibitem{AKS19}A. Antonov, M. Konikov, M. Spector.
-Modern SABR Analytics: Formulas and Insights for Quants, Former Physicists and Mathematicians.
-\textit{SpringerBriefs in Quantitative Finance}, 2019.
-
-\bibitem{ACS99}M. Avellaneda, A. Carelli, F. Stella.
-Following the Bayes path to option pricing.
-\textit{Journal of Computational Intelligence in Finance}, {\tt 8}4, 1999.
 
 \bibitem{BFGMS17}C.~Bayer, P.~Friz, P.~Gassiat, J.~Martin and B.~Stemper.
 A regularity structure for rough volatility. 
@@ -526,22 +628,8 @@ Short-time near the money skew in rough fractional stochastic volatility models.
 On deep calibration of (rough) stochastic volatility models.
 \href{https://arxiv.org/abs/1908.08806}{arXiv:1908.08806}, 2019.
 
-\bibitem{BS18}C.~Bayer and B.~Stemper. Deep calibration of rough stochastic volatility models. \textit{Preprint}, \href{https://arxiv.org/pdf/1810.03399.pdf}{arXiv:1810.03399}
-
-\bibitem{BLP16} M.~Bennedsen, A.~Lunde and M.S.~Pakkanen. 
-Hybrid scheme for Brownian semistationary processes. 
-\textit{Finance and Stochastics}, {\tt 21}(4): 931-965, 2017.
-
 \bibitem{BergomiBook}L.~Bergomi. Stochastic Volatility Modeling.
 Chapman \& Hall/CRC financial mathematical series.  \textit{Chapman \& Hall/CRC}, 2015.
-
-\bibitem{OsterleeI} B.~Chen, C.~W. ~Oosterlee and H.~Van~Der~Weide. Efficient unbiased simulation scheme for the SABR stochastic volatility model, 2011.
-
-\bibitem{Cont10}R. Cont.
-Model Calibration.
-\textit{Encyclopedia of Quantitative Finance},
-{\tt 5}, 2010. \href{https://doi.org/10.1002/9780470061602.eqf08002
-}{DOI:10.1002/9780470061602.eqf08002}
 
 \bibitem{CulcinDas17}R. Culkin and S. R. Das 
 Machine Learning in Finance: The Case of Deep Learning for Option Pricing. 
@@ -552,50 +640,16 @@ Fast derivative pricing, hedging and fitting. \href{https://papers.ssrn.com/sol3
 
 \bibitem{HestonConvolutional} G.~Dimitroff, D.~R\"oder and C.~P. Fries. Volatility model calibration with convolutional neural networks. \textit{Preprint}, \href{https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3252432}{SSRN:3252432}, 2018.
 
-\bibitem{DepthNN}R.~Eldan and O.~Shamir. The power of depth for feedforward neural neworks. \textit{JMLR: Workshop and Conference Proceedings} {\tt Vol 49:1-34}, 2016.
-
-\bibitem{ER18}O. El Euch and M. Rosenbaum.
-Perfect hedging in rough Heston models, to appear in
-\textit{The Annals of Applied Probability}, 2018.
-
 \bibitem{FZ17} M.~Forde, H.~Zhang. Asymptotics for Rough Stochastic Volatility
-%  Models, \textit{SIAM Journal on Financial Mathematics} 8(1):114--145, 2017.
-
-\bibitem{StatisticalLearning}J.~Friedman, R.~Tibshiran and  T.~Hastie. The Elements of Statistical Learning. \textit{Springer New York Inc}, 2001.
 
 \bibitem{FG18} R.~Ferguson and A. D.~Green. Deeply learning derivatives.
   Preprint \href{https://arxiv.org/abs/1809.02233}{arXiv:1809.02233}, 2018.
-
-\bibitem{FHLG13} D. Foreman-Mackey, D. W. Hogg, D. Lang, J. Goodman.
-  emcee: the MCMC hammer, \emph{Publications of the Astronomical Society of
-    the Pacific}, 125(925), 306, 2013.
-
-\bibitem{For16} D. Foreman-Mackey, corner.py: Scatterplot matrices in Python,
-  \emph{The Journal of Open Source Software} 24,
-  \url{http://dx.doi.org/10.5281/zenodo.45906}, 2016.
 
 \bibitem{Fukasawa}M. Fukasawa.
 Asymptotic analysis for stochastic volatility: martingale expansion.
 \textit{Finance and Stochastics}, {\tt 15}: 635-654, 2011.
 
-\bibitem{Gat11} J.~Gatheral. The volatility surface: a practitioner's guide,
-\textit{Wiley}, 2011.
-
-\bibitem{GJR14}J.~Gatheral, T.~Jaisson  and M.~Rosenbaum.
-Volatility is rough.
-\textit{Quantitative Finance}, {\tt 18}(6): 933-949, 2018.
-
-\bibitem{Glau19}K. Glau, D. Kressner, and F. Statti.
-Low-rank tensor approximation for Chebyshev interpolation in parametric option pricing.
-\href{https://arxiv.org/pdf/1902.04367.pdf}{arXiv:1902.04367}, 2019.
-
-\bibitem{Green15}A. Green. XVA: Credit, Funding and Capital Valuation Adjustments. \textit{Wiley}, 2015.
-
 \bibitem{Hagan1}P. Hagan, D. Kumar, A. Lesniewski, and D. Woodward. Managing smile risk. \textit{Wilmott Magazine}, {\tt September issue: 84-108}, 2002.
-
-\bibitem{HJW17}J. Han, A. Jentzen, E. Weinan.
-Overcoming the curse of dimensionality: Solving high-dimensional partial differential equations using deep learning.
-\textit{PNAS}.{\tt 115}(34) 8505-8510, August 2018.
 
 \bibitem{Hes93}S.L.~Heston. A closed-form solution for options with stochastic
   volatility with applications to bond and currency options, \textit{The Review of Financial Studies} 6(2):327--343, 1993.
@@ -605,13 +659,6 @@ Overcoming the curse of dimensionality: Solving high-dimensional partial differe
 \bibitem{UniversalApprox}K. Hornik, M. Stinchcombe, and H. White. 
 Multilayer feedforward networks are universal approximators. 
 \textit{Neural Networks}, {\tt 2}(5):359-366, 1989.
-
-\bibitem{UniversalApproxDerivatives}K.~Hornik. M.~Stinchcombe and H.~White. Universal approximation of an unknown mapping and its derivatives using multilayer feedforward networks. \textit{Neural Networks}.
-Vol. 3:11, 1990.
-
-\bibitem{PHL17}P. Henry-Labord\`{e}re.
-Deep primal-dual algorithm for BSDEs: applications of machine learning to CVA and IM. 
-\href{https://ssrn.com/abstract=3071506}{SSRN:3071506}
 
 \bibitem{HJM17}B.~Horvath, A.~Jacquier and A.~Muguruza.
 Functional central limit theorems for rough volatility.
@@ -626,23 +673,10 @@ J. M. Hutchinson, A. W. Lo and T. Poggio.
 A Nonparametric Approach to Pricing and Hedging Derivative Securities Via Learning Networks.
 \textit{The Journal of Finance}, {\tt 49}(3) 851-889. \textit{Papers and Proceedings Fifty-Fourth Annual Meeting of the American Finance Association, Boston, Massachusetts}, 1994.
 
-\bibitem{Itkin14} A. Itkin.
-To sigmoid-based functional description of the volatility smile.
-\textit{Preprint}, \href{https://arxiv.org/pdf/1407.0256.pdf}{arXiv:1407.0256}, 2014. 
-
-\bibitem{IS15}S. Ioffe and C. Szegedy.
-Batch normalisation: Accelerating deep network training by reducing internal covariate shift. \textit{Preprint}, \href{https://arxiv.org/abs/1502.03167}{arXiv:1502.03167}, 2015.
-
 \bibitem{KBAdam} D.P.~Kingman and J.~Ba, Adam: A Method for Stochastic Optimization. \textit{Conference paper}, 3rd International Conference for Learning Representations, 2015.
-
-\bibitem{OsterleeII} A.~Leitao~Rodriguez, L.A.~Grzelak and C.W.~Oosterlee. On an efficient multiple time step Monte Carlo simulation of the SABR model. \textit{Quantitative Finance}, {\tt 17}(10), pp.1549-1565, 2017.
 
 \bibitem{Levenberg} K.~Levenberg. A Method for the Solution of Certain Non-Linear Problems in Least Squares. \textit{Quarterly of Applied Mathematics}. 2: pp. 164-168, 1944.
 \bibitem{Marquardt} D.~Marquardt. An Algorithm for Least-Squares Estimation of Nonlinear Parameters. \textit{SIAM Journal on Applied Mathematics}. 11 (2): pp. 431-441,1963.`
-
-\bibitem{LiuGrezakOosterlee} S. Liu, A. Borovykh, L. A. Grzelak, C. W. Oosterlee.
-A neural network-based framework for financial model calibration.
-Preprint, \href{https://arxiv.org/abs/1904.10523}{arXiv:1904.10523}, 2019.
 
 \bibitem{Ludkovski} M. Ludkovski.
 Statistical Machine Learning for Quantitative Finance.
@@ -652,25 +686,8 @@ Statistical Machine Learning for Quantitative Finance.
 
 \bibitem{MP18} R.~McCrickerd, M.~Pakkanen, Turbocharging Monte Carlo pricing for the rough Bergomi model, \textit{Quantitative Finance} 18(11):1877-1886, 2018.
 
-\bibitem{RGLO17}A. Leitao Rodriguez, A. Grzelak Lech, Cornelis W. Oosterlee.
-On a one time-step Monte Carlo simulation approach of the SABR model : Application to European options.
-\textit{Applied Mathematics and Computation}, {\tt 293} p. 461-479, 2017,
-
-\bibitem{SSSz18} M. Sabate Vidales, D. Siska, L. Szpruch
-Unbiased deep solvers for parametric PDEs
-\href{https://arxiv.org/abs/1810.05094}{arXiv:1810.05094}, 2018.
-
-
-\bibitem{SS18}J. Sirignano and K. Spiliopoulos.
-DGM: A deep learning algorithm for solving partial differential equations.
-\textit{Journal of Computational Physics}
-{\tt 375}(15) 1339-1364, December 2018
-
-\bibitem{SW2011} L.~Setayeshgar, and H.~Wang. Large deviations for a feed-forward network, \textit{Advances in Applied Probability}, 43: 2, pp. 545-571, 2011.
-
-\bibitem{ShaClCo18}U. Shaham, A. Cloninger, and R. R. Coifman. 
-Provable approximation properties for deep neural networks. 
-\textit{Appl. Comput. Harmon. Anal.}, {\tt 44}(3): 537-557, 2018.
+\bibitem{NelderMead} J. A. Nelder, R. Mead, A simplex method for function minimization.
+\textit{Computer Journal}, {\tt 7}, pp. 308-313, 1965.
 
 \bibitem{Stone}H. Stone. Calibrating rough volatility models: a convolutional neural network approach. \textit{Preprint}, \href{https://arxiv.org/pdf/1812.05315.pdf}{arXiv:1812.05315}, 2018.
 \end{thebibliography}
